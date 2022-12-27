@@ -10,7 +10,13 @@ fragmentShader resd 1
 shaderProgram resd 1
 height resd 1
 width resd 1
+texture1 resd 1
+texture2 resd 1
+textureWidth resd 1
+textureHeight resd 1
+nrChannels resd 1
 shader resb 4096
+data resb 1166400
 
 ; initialized
 section .rodata
@@ -21,14 +27,16 @@ align 8
 shaderAddress dq shader
 clearCol dd 0.2
 onef dd 1.0
-vertices dd -0.5, -0.5, 0.0, 1.0, 0.0, 0.0, 0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 1.0
-indices dd 0, 1, 2
+vertices dd 0.5, 0.5, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, -0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, -0.5, -0.5, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, -0.5, 0.5, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0
+indices dd 0, 1, 3, 1, 2, 3
 texCoords dd 0.0, 0.0, 1.0, 0.0, 0.5, 1.0
 
 ; strings
 title db "OpenGL in ASM",0
 vertexSource db "./shader.vert", 0
 fragmentSource db "./shader.frag", 0
+textureSource1 db "./tex1.jpg", 0
+textureSource2 db "./tex2.jpg", 0
 ; instructions
 section .text
 ; imports
@@ -112,26 +120,36 @@ main:
 	call [glad_glBufferData]
 
 
-	; glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float) = 24, NULL)
+	; glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float) = 24, NULL)
 	mov rdi, 0
 	mov rsi, 3
 	mov rdx, [GL_FLOAT]
 	mov rcx, [GL_FALSE]
-	mov r8, 6 * 4
+	mov r8, 8 * 4
 	mov r9, 0
 	call [glad_glVertexAttribPointer]
 	; glEnableVertexAttribArray(0)
 	mov rdi, 0
 	call [glad_glEnableVertexAttribArray]
-	; glVertexAttribPointer(1,3,GL_FLOAT,GL_FALSE, 6* sizeof(float), 3 * sizeof(float)
+	; glVertexAttribPointer(1,3,GL_FLOAT,GL_FALSE, 8 * sizeof(float), 3 * sizeof(float)
 	mov rdi,1
 	mov rsi, 3
 	mov rdx, [GL_FLOAT]
 	mov rcx, [GL_FALSE]
-	mov r8, 6 * 4
+	mov r8, 8 * 4
 	mov r9, 3 * 4
 	call [glad_glVertexAttribPointer]
 	mov rdi, 1
+	call [glad_glEnableVertexAttribArray]
+	; glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), 6 * sizeof(float))
+	mov rdi, 2
+	mov rsi, 2
+	mov rdx, [GL_FLOAT]
+	mov rcx, [GL_FALSE]
+	mov r8, 8 * 4
+	mov r9, 6 * 4
+	call [glad_glVertexAttribPointer]
+	mov rdi, 2
 	call [glad_glEnableVertexAttribArray]
 
 	; glBindBuffer(GL_ARRAY_BUFFER, 0)
@@ -139,7 +157,56 @@ main:
 	mov rsi, 0
 	call [glad_glBindBuffer]
 
+	; generate textures
 
+	; glGenTextures(1, &texture1)
+	mov rdi, 1
+	mov rsi, texture1
+	call [glad_glGenTextures]
+
+	; glBindTexture(GL_TEXTURE_2D, texture1)
+	mov rdi, [GL_TEXTURE_2D]
+	mov rsi, [texture1]
+	call [glad_glBindTexture]
+
+	; glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,T, GL_REPEAT)
+	mov rdi, [GL_TEXTURE_2D]
+	mov rsi, [GL_TEXTURE_WRAP_S]
+	mov rdx, [GL_REPEAT]
+	call [glad_glTexParameteri]
+	mov rdi, [GL_TEXTURE_2D]
+	mov rsi, [GL_TEXTURE_WRAP_T]
+	mov rdx, [GL_REPEAT]
+	call [glad_glTexParameteri]
+
+	; texture filtering
+	mov rdi, [GL_TEXTURE_2D]
+	mov rsi, [GL_TEXTURE_MIN_FILTER]
+	mov rdx, [GL_LINEAR]
+	call [glad_glTexParameteri]
+	mov rdi, [GL_TEXTURE_2D]
+	mov rsi, [GL_TEXTURE_MAG_FILTER]
+	mov rdx, [GL_LINEAR]
+	call [glad_glTexParameteri]
+
+	; load image, create texture, generate mipmaps
+	mov rdi, 1
+	call stbi_set_flip_vertically_on_load
+	
+	; get file descriptor
+	mov rax, 2
+	mov rdi, textureSource1
+	xor rsi, rsi
+	syscall
+	
+	mov rdi, rax
+	mov rsi, textureWidth
+	mov rdx, textureHeight
+	mov rcx, nrChannels
+	xor r8, r8
+	call stbi_load
+	mov [data], rax
+	
 
 mainLoop:
 	; glClearColor(r = 0.2, g = 0.2, b = 0.2, a = 1.0)

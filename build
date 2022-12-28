@@ -1,2 +1,2 @@
 yasm -f elf64 -g dwarf2 main.asm -o main.o
-gcc -o main main.o glad.o stbi.o -lGL -lglfw -no-pie -dwarf-2
+gcc -o main main.o glad.o stbi.o -lGL -ldl -lm -lglfw -no-pie -dwarf-2

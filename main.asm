@@ -35,8 +35,8 @@ texCoords dd 0.0, 0.0, 1.0, 0.0, 0.5, 1.0
 title db "OpenGL in ASM",0
 vertexSource db "./shader.vert", 0
 fragmentSource db "./shader.frag", 0
-textureSource1 db "./tex1.jpg", 0
-textureSource2 db "./tex2.jpg", 0
+textureSource1 db "/home/dennis/projects/assembly/OpenGL_x86-64NASM/tex1.jpg", 0
+textureSource2 db "/home/dennis/projects/assembly/OpenGL_x86-64NASM/tex2.png", 0
 ; instructions
 section .text
 ; imports
@@ -193,19 +193,30 @@ main:
 	mov rdi, 1
 	call stbi_set_flip_vertically_on_load
 	
-	; get file descriptor
-	mov rax, 2
-	mov rdi, textureSource1
+	; load texture
+	;
+	;
+	;TODO implement texture loading using stbi
+	;
+	;
+	; glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data)
+	mov rdi, [GL_TEXTURE_2D]
 	xor rsi, rsi
-	syscall
-	
-	mov rdi, rax
-	mov rsi, textureWidth
-	mov rdx, textureHeight
-	mov rcx, nrChannels
-	xor r8, r8
-	call stbi_load
-	mov [data], rax
+	mov rdx, [GL_RGB]
+	mov rcx, [width]
+	mov r8, [height]
+	mov r9, 0
+	push GL_RGB
+	push GL_UNSIGNED_BYTE
+	push data
+	call [glad_glTexImage2D]
+	pop rax
+	pop rax
+	pop rax
+
+	; glGenerateMipmap(GL_TEXTURE_2D)
+	mov rdi, [GL_TEXTURE_2D]
+	call [glad_glGenerateMipmap]
 	
 
 mainLoop:
